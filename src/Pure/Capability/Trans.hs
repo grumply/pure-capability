@@ -1,5 +1,5 @@
 {-# LANGUAGE RankNTypes, KindSignatures, MultiParamTypeClasses,
-   FunctionalDependencies, CPP #-}
+   FunctionalDependencies, CPP, FlexibleInstances, UndecidableInstances #-}
 module Pure.Capability.Trans (
     -- * The Context monad
     Context,
@@ -33,6 +33,12 @@ import qualified Control.Monad.Fail as Fail
 import Control.Monad.Fix
 import Control.Monad.Zip
 import Data.Functor
+
+import Control.Monad.Cont
+import Control.Monad.Except
+import Control.Monad.Reader
+import Control.Monad.State
+import Control.Monad.Writer
 
 type Context c a = ContextT c Identity a
 
@@ -144,3 +150,38 @@ ctxs :: Monad m => (c m -> a) -> ContextT c m a
 ctxs f = ContextT (return . f)
 {-# INLINE ctxs #-}
 
+instance MonadReader r m => MonadReader r (ContextT c m) where
+  ask = lift ask
+  local = mapContextT id . local
+
+instance (Monoid w, MonadWriter w m) => MonadWriter w (ContextT c m) where
+  writer = lift . writer
+  tell = lift . tell
+  listen = mapContextT id listen
+  pass = mapContextT id pass
+
+instance MonadState s m => MonadState s (ContextT c m) where
+  get = lift get
+  put = lift . put
+  state = lift . state
+
+instance MonadCont m => MonadCont (ContextT c m) where
+  callCC = liftCallCC callCC
+
+instance MonadError e m => MonadError e (ContextT c m) where
+  throwError = lift . throwError
+  catchError = liftCatch catchError
+
+liftCallCC :: (((a -> m b) -> m a) -> m a) 
+           -> ((a -> ContextT c m b) -> ContextT c m a) 
+           -> ContextT c m a
+liftCallCC callCC f = 
+  ContextT $ \c ->
+    callCC $ \cc ->
+      runContextT (f (\a -> ContextT $ \_ -> cc a)) c
+
+liftCatch :: (m a -> (e -> m a) -> m a) 
+          -> ContextT c m a 
+          -> (e -> ContextT c m a) 
+          -> ContextT c m a
+liftCatch f m h = ContextT $ \c -> f (runContextT m c) (\e -> runContextT (h e) c)
