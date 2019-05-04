@@ -12,6 +12,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:
+      Pure.Capability
       Pure.Capability.TH
 
   build-depends:

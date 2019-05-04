@@ -4,6 +4,54 @@ module Pure.Capability.TH where
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
+-- | Given a single-constructor non-GADT parametrically polymorphic record type
+-- of fields with parameterized return types, produce a `Monad<Capability>`
+-- class to simplify use of that type. This is a sort of inversion/reification
+-- of the MTL approach of specifying capabilities implicitly w.r.t. the
+-- evaluation context. Instead, we supply the capabilities explicitly, allowing
+-- for modification/extension a la reification/reflection.
+--
+-- Example:
+--
+-- > data SomeCapability m = SomeCapability { _methodA :: Int -> m Bool }
+-- > mkCapability ''SomeCapability
+-- 
+-- Produces:
+--
+-- > class MonadSomeCapability m where
+-- >   withSomeCapability :: (SomeCapability m -> m a) -> m a
+-- >   
+-- >   methodA :: Int -> m Bool
+-- >   methodA i = withSomeCapability $ \sc -> _methodA sc i
+--
+-- Where you would only be required to supply an instance of
+-- `withSomeCapability` to use `MonadSomeCapability` in your evaluation 
+-- context.
+--
+-- See `Pure.Capability` for an idea of how to group capabilities into a context
+-- a la MonadReader.
+--
+-- With this approach, given nested contexts, you can lower some capability to a
+-- shared base context before passing it to a nested evaluation context. For 
+-- instance, you could add an effect, say logging, to the methods of a 
+-- capability from the supplier of the capability. If the capability is shared
+-- cascade-style from the root context through the nested evaluation contexts,
+-- you could add communicative effects that notify/communicate with parent 
+-- contexts on each or specific method calls.
+--
+-- This concept of nested evaluation contexts is significant for the style of 
+-- evaluation seen in pure applications, where nesting of contexts is
+-- especially pervasive.
+--
+-- This is not the most expressive solution to this problem of supplied and 
+-- shared evaluation contexts, but it strikes a nice balance between simplicity
+-- and power.
+--
+-- NOTE: This approach enforces the constraint `Monad m =>` for the capabilities
+-- parameter even though that constraint is not technically required. This
+-- simplifies instantiation of the class in the common case, but might not be 
+-- desired. If you find a case in which this is not desired, let me know and we
+-- can rework this approach with some parameterization.
 mkCapability :: Name -> Q [Dec]
 mkCapability record = do
   info <- reify record
@@ -37,7 +85,7 @@ mkCapability record = do
             ]
         _ -> error "error in mkCapability: the last type variable of a capability must be of kind `* -> *`"
     _ ->
-      error "error in mkCapability: capabilities must be single-constructor non-GADT record types with at least one type variable with a last type variable of kind `* -> *`"
+      error "error in mkCapability: capabilities must be parametrically polymorphic single-constructor non-GADT record data type with a last type variable of kind `* -> *`"
   where
     makeMethods tyvs capability ctx result [] =
       let 
