@@ -40,7 +40,7 @@ class Monad m => MonadContext c m | m -> c where
 
   {-# MINIMAL (ctx | context), contextual #-}
 
-ctxs :: Monad m => (c -> a) -> ContextT c m a
+ctxs :: MonadContext c m => (c -> a) -> m a
 ctxs = context
 {-# INLINE ctxs #-}
 
