@@ -13,6 +13,7 @@ cabal-version:       >=1.10
 library
   exposed-modules:
       Pure.Capability
+      Pure.Capability.Class
       Pure.Capability.FFunctor
       Pure.Capability.TH
       Pure.Capability.Trans

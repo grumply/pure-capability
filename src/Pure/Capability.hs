@@ -1,6 +1,9 @@
 {-# LANGUAGE RankNTypes, KindSignatures, MultiParamTypeClasses,
-   FunctionalDependencies, CPP #-}
+   FunctionalDependencies, CPP, FlexibleInstances #-}
 module Pure.Capability (
+  -- * The Context Monad
+  MonadContext(..),
+  ctxs,
   -- * The FFunctor class
   FFunctor(..),
   -- * The Context monad
@@ -14,9 +17,11 @@ module Pure.Capability (
   mapContextT,
   withContextT,
   module Control.Monad,
-  module Control.Monad.Fix
+  module Control.Monad.Fix,
+  module Control.Monad.Trans
   ) where
 
+import Pure.Capability.Class
 import Pure.Capability.FFunctor
 import Pure.Capability.Trans (
   Context, runContext, mapContext, withContext,
@@ -24,5 +29,5 @@ import Pure.Capability.Trans (
 
 import Control.Monad
 import Control.Monad.Fix
-
+import Control.Monad.Trans
 

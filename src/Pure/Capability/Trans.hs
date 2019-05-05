@@ -14,7 +14,6 @@ module Pure.Capability.Trans (
     -- * Context operations
     ctx,
     contextual,
-    ctxs
     ) where
 
 import Control.Monad.IO.Class
@@ -42,36 +41,36 @@ import Control.Monad.Writer
 
 type Context c a = ContextT c Identity a
 
-context :: (Monad m) => (c m -> a) -> ContextT c m a
+context :: (Monad m) => (c -> a) -> ContextT c m a
 context f = ContextT (return . f)
 {-# INLINE context #-}
 
-runContext :: Context c a -> c Identity -> a
+runContext :: Context c a -> c -> a
 runContext m = runIdentity . runContextT m
 {-# INLINE runContext #-}
 
 mapContext :: (a -> b) -> Context c a -> Context c b
-mapContext f = mapContextT id (Identity . f . runIdentity)
+mapContext f = mapContextT (Identity . f . runIdentity)
 {-# INLINE mapContext #-}
 
-withContext :: (c' Identity -> c Identity) -> Context c a -> Context c' a
+withContext :: (c' -> c) -> Context c a -> Context c' a
 withContext = withContextT
 {-# INLINE withContext #-}
 
-newtype ContextT c m a = ContextT { runContextT :: c m -> m a }
+newtype ContextT c m a = ContextT { runContextT :: c -> m a }
 
-mapContextT :: (c n -> c m) -> (m a -> n b) -> ContextT c m a -> ContextT c n b
-mapContextT g f m = ContextT (f . runContextT m . g)
+mapContextT :: (m a -> n b) -> ContextT c m a -> ContextT c n b
+mapContextT f m = ContextT (f . runContextT m)
 {-# INLINE mapContextT #-}
 
-withContextT :: (c' m -> c m) -> ContextT c m a -> ContextT c' m a
+withContextT :: (c' -> c) -> ContextT c m a -> ContextT c' m a
 withContextT f m = ContextT $ runContextT m . f
 {-# INLINE withContextT #-}
 
 instance Functor m => Functor (ContextT c m) where
-  fmap f = mapContextT id (fmap f)
+  fmap f = mapContextT (fmap f)
   {-# INLINE fmap #-}
-  x <$ v = mapContextT id (x <$) v
+  x <$ v = mapContextT (x <$) v
   {-# INLINE (<$) #-}
 
 instance Applicative m => Applicative (ContextT c m) where
@@ -138,27 +137,23 @@ liftContextT :: m a -> ContextT c m a
 liftContextT m = ContextT (const m)
 {-# INLINE liftContextT #-}
 
-ctx :: Monad m => ContextT c m (c m)
+ctx :: Monad m => ContextT c m c
 ctx = ContextT return
 {-# INLINE ctx #-}
 
-contextual :: (c m -> c m) -> ContextT c m a -> ContextT c m a
+contextual :: (c -> c) -> ContextT c m a -> ContextT c m a
 contextual = withContextT
 {-# INLINE contextual #-}
 
-ctxs :: Monad m => (c m -> a) -> ContextT c m a
-ctxs f = ContextT (return . f)
-{-# INLINE ctxs #-}
-
 instance MonadReader r m => MonadReader r (ContextT c m) where
   ask = lift ask
-  local = mapContextT id . local
+  local = mapContextT . local
 
 instance (Monoid w, MonadWriter w m) => MonadWriter w (ContextT c m) where
   writer = lift . writer
   tell = lift . tell
-  listen = mapContextT id listen
-  pass = mapContextT id pass
+  listen = mapContextT listen
+  pass = mapContextT pass
 
 instance MonadState s m => MonadState s (ContextT c m) where
   get = lift get
