@@ -4,6 +4,7 @@ module Pure.Capability.TH (mkCapability, mkContext, mkAspect, module Export) whe
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
+import Pure.Capability.Aspect as Export
 import Pure.Capability.FFunctor as Export
 
 import Data.Foldable
@@ -247,8 +248,10 @@ mkContext record = do
 -- > instance MonadX Int SomeM where withX = (>>=) (ctxs x)
 -- > instance Rebase X SomeM where 
 -- >   rebase x = do 
--- >     _methodA' <- prepare1 (_methodA x)
--- >     pure (X _methodA')
+-- >     c <- ctx
+-- >     r <- ask
+-- >     s <- sref
+-- >     pure (X (runAspect (_methodA x) c r s))
 -- > instance Rebase Ctx SomeM where
 -- >   rebase ctx = do
 -- >     x' <- rebase (x ctx)
@@ -257,13 +260,13 @@ mkAspect :: Name -> Q [Dec]
 mkAspect aspct = do
   ainfo <- reify aspct
   case ainfo of
-    TyConI (NewtypeD _ a _ _ (RecC con [(_,_,ty)]) _) -> do
+    TyConI (NewtypeD _ a _ _ (RecC _ [(unM,_,ty)]) _) -> do
       case ty of
         AppT (AppT (AppT (AppT (ConT _) (AppT ctx m)) env) state) _ -> do
           cinfo <- reify (extractCtx ctx)
           case cinfo of
             TyConI (DataD [] c _ _ [RecC _ methods] _) -> do
-              rebasedCapabilities <- for methods deriveRebaseCapability
+              rebasedCapabilities <- for methods (deriveRebaseCapability unM)
               capabilityMonads <- for methods deriveCapabilityMonad
               rebasedContext <- deriveRebaseContext c
               pure (rebasedContext : capabilityMonads ++ rebasedCapabilities)
@@ -278,7 +281,7 @@ mkAspect aspct = do
     initTy (AppT l r) = l
     initTy l = l
 
-    deriveRebaseCapability (nm,_,ty) = do
+    deriveRebaseCapability unM (nm,_,ty) = do
       cinfo <- reify (extractCtx ty)
       case cinfo of
         TyConI (DataD _ _ [] _ _ _) ->
@@ -286,20 +289,36 @@ mkAspect aspct = do
         TyConI (DataD _ c@(Name (OccName capability) _) tyvs _ [RecC con methods] _) ->
           case last tyvs of
             KindedTV tyNm (AppT (AppT ArrowT StarT) StarT) -> do
-              c <- newName "ctx"
-              stmts <- for methods $ \(m@(Name (OccName nm) _),_,ty) -> do
-                nm' <- newName nm
+              ct <- newName "ct"
+              c  <- newName "c"
+              r  <- newName "r"
+              s  <- newName "s"
+              nmargs <- for methods $ \(m,_,ty) -> do
                 let cnt = argCount 0 ty
                     argCount n (AppT (AppT ArrowT _) r) = argCount (n + 1) r
                     argCount n (ForallT _ _ r) = argCount n r
                     argCount n _ = n
-                pure (nm',BindS (VarP nm') (AppE (VarE (mkName $ "prepare" ++ show cnt)) (ParensE (AppE (VarE m) (VarE c)))))
+                args <- for [1..cnt] (\_ -> newName "x")
+                pure (m,args) -- BindS (VarP nm') (AppE (VarE (mkName $ "prepare" ++ show cnt)) (ParensE (AppE (VarE m) (VarE ct)))))
               pure $ InstanceD Nothing [] (AppT (AppT (ConT (mkName "Rebase")) (ParensT (initTy ty))) (ConT aspct))
                 [ FunD (mkName "rebase") 
-                    [ Clause [ VarP c ] 
+                    [ Clause [ VarP ct ] 
                         (NormalB $ DoE $
-                          ( fmap snd stmts 
-                          ) ++ [ NoBindS (VarE (mkName "pure") `AppE` foldl (\f -> AppE f . VarE) (ConE con) (fmap fst stmts)) ]
+                          [ BindS (VarP c) (VarE $ mkName "ctx")
+                          , BindS (VarP r) (VarE $ mkName "ask")
+                          , BindS (VarP s) (VarE $ mkName "sref")
+                          , NoBindS 
+                            (VarE (mkName "pure") `AppE` 
+                              foldl (\f (nm,args) -> AppE f $
+                                (LamE (map (\a -> VarP a) args) $
+                                  VarE (mkName "runAspect") `AppE`
+                                    ParensE (VarE unM `AppE`
+                                      ParensE (foldl (\f a -> f `AppE` VarE a) (VarE nm `AppE` VarE ct) args)
+                                      ) `AppE` VarE c `AppE` VarE r `AppE` VarE s
+                                    )
+                                ) (ConE con) nmargs
+                            )
+                          ]
                         )
                         []
                     ]

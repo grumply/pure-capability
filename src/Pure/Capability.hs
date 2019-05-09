@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, GeneralizedNewtypeDeriving, FlexibleInstances, RankNTypes, NoMonomorphismRestriction #-}
 module Pure.Capability (
   -- * The Context Monad
   MonadContext(..),
@@ -14,6 +15,22 @@ module Pure.Capability (
   runContextT,
   mapContextT,
   withContextT,
+  -- * The Aspect type
+  Aspect(..),
+  runAspect,
+  -- * The Rebase class
+  Rebase(..),
+  -- * The prepare methods
+  prepare0,
+  prepare1,
+  prepare2,
+  prepare3,
+  prepare4,
+  prepare5,
+  prepare6,
+  prepare7,
+  prepare8,
+  -- * Re-exported modules
   module Control.Monad,
   module Control.Monad.Fix,
   module Control.Monad.Trans
@@ -31,20 +48,18 @@ import Control.Monad.Fix
 import Control.Monad.Trans
 
 {-
-data X a m = X 
-  { _method1 :: a -> m () 
-  , _method2 :: a -> Int -> m ()
-  , _method3 :: a -> Int -> Int -> m ()
-  , _method4 :: a -> Int -> Int -> Int -> m ()
-  , _method5 :: a -> Int -> Int -> Int -> Int -> m ()
-  , _method6 :: a -> Int -> Int -> Int -> Int -> Int -> m ()
-  , _method7 :: a -> Int -> Int -> Int -> Int -> Int -> Int -> m () 
-  , _method8 :: a -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> m () 
+import Pure.Capability.TH
+import Control.Monad.IO.Class
+import Control.Monad.Reader as R
+import Pure.State (MonadSRef(..),liftPure)
+
+data X m = X 
+  { _method1 :: forall n. Num n => n -> m ()
   }
 mkCapability ''X
 
 data Ctx m = Ctx
-  { x :: X Int m
+  { x :: X m
   }
 mkContext ''Ctx
 

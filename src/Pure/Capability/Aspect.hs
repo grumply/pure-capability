@@ -1,10 +1,10 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, FunctionalDependencies,
-   MultiParamTypeClasses, GeneralizedNewtypeDeriving #-}
+   MultiParamTypeClasses, GeneralizedNewtypeDeriving, NoMonomorphismRestriction #-}
 module Pure.Capability.Aspect where
 
 import Pure.Capability.Context
 import Pure.Capability.Context.Trans (ContextT(..))
-import Pure.State (PureM,MonadSRef(..),liftPure)
+import Pure.State (PureM,MonadSRef(..),liftPure,SRef)
 
 import Control.Monad.Reader as R hiding (lift)
 import Control.Monad.IO.Class
@@ -13,100 +13,70 @@ import Data.Coerce
 import Pure.Capability.FFunctor
 
 newtype Aspect c r s a = Aspect 
-  { runAspect :: ContextT c (ReaderT r (PureM s)) a 
+  { unAspect :: ContextT c (ReaderT r (PureM s)) a 
   } deriving 
       (Functor,Applicative,Monad,MonadIO ,MonadReader r
       ,MonadSRef s
       ,MonadContext c
       )
 
+runAspect :: Aspect c r s a -> c -> r -> SRef s -> IO a
+runAspect f c r s = liftPure s (runReaderT (runContextT (unAspect f) c) r)
+
 class Rebase c m where
   rebase :: c m -> m (c IO)
 
-prepare0 :: (Coercible b (Aspect c r s a)) => b -> Aspect c r s (IO a)
 prepare0 x = do
   r <- R.ask
   c <- ctx
   s <- sref
-  pure $ liftPure s (runReaderT (runContextT (runAspect (coerce x)) c) r)
+  pure $ runAspect c r s (coerce x)
 
-prepare1 :: (Coercible b (Aspect c r s a)) 
-         => (g -> b) 
-         -> Aspect c r s (g -> IO a)
 prepare1 f = do
   r <- R.ask
   c <- ctx
   s <- sref
-  pure $ \_1 -> 
-    liftPure s (runReaderT (runContextT (runAspect (coerce f _1)) c) r)
+  pure $ \_1 -> runAspect c r s (coerce f _1)
 
-prepare2 :: (Coercible b (Aspect c r s a)) 
-         => (g -> h -> b) 
-         -> Aspect c r s (g -> h -> IO a)
 prepare2 f = do
   r <- R.ask
   c <- ctx
   s <- sref
-  pure $ \_1 _2 -> 
-    liftPure s (runReaderT (runContextT (runAspect (coerce f _1 _2)) c) r)
+  pure $ \_1 _2 -> runAspect c r s (coerce f _1 _2)
 
-prepare3 :: (Coercible b (Aspect c r s a)) 
-         => (g -> h -> i -> b) 
-         -> Aspect c r s (g -> h -> i -> IO a)
 prepare3 f = do
   r <- R.ask
   c <- ctx
   s <- sref
-  pure $ \_1 _2 _3 -> 
-    liftPure s (runReaderT (runContextT (runAspect (coerce f _1 _2 _3)) c) r)
+  pure $ \_1 _2 _3 -> runAspect c r s (coerce f _1 _2 _3)
 
-prepare4 :: (Coercible b (Aspect c r s a)) 
-         => (g -> h -> i -> j -> b) 
-         -> Aspect c r s (g -> h -> i -> j -> IO a)
 prepare4 f = do
   r <- R.ask
   c <- ctx
   s <- sref
-  pure $ \_1 _2 _3 _4 -> 
-    liftPure s (runReaderT (runContextT (runAspect (coerce f _1 _2 _3 _4)) c) r)
+  pure $ \_1 _2 _3 _4 -> runAspect c r s (coerce f _1 _2 _3 _4)
 
-prepare5 :: (Coercible b (Aspect c r s a)) 
-         => (g -> h -> i -> j -> k -> b) 
-         -> Aspect c r s (g -> h -> i -> j -> k -> IO a)
 prepare5 f = do
   r <- R.ask
   c <- ctx
   s <- sref
-  pure $ \_1 _2 _3 _4 _5 -> 
-    liftPure s (runReaderT (runContextT (runAspect (coerce f _1 _2 _3 _4 _5)) c) r)
+  pure $ \_1 _2 _3 _4 _5 -> runAspect c r s (coerce f _1 _2 _3 _4 _5)
 
-prepare6 :: (Coercible b (Aspect c r s a)) 
-         => (g -> h -> i -> j -> k -> l -> b) 
-         -> Aspect c r s (g -> h -> i -> j -> k -> l -> IO a)
 prepare6 f = do
   r <- R.ask
   c <- ctx
   s <- sref
-  pure $ \_1 _2 _3 _4 _5 _6 -> 
-    liftPure s (runReaderT (runContextT (runAspect (coerce f _1 _2 _3 _4 _5 _6)) c) r)
+  pure $ \_1 _2 _3 _4 _5 _6 -> runAspect c r s (coerce f _1 _2 _3 _4 _5 _6)
 
-prepare7 :: (Coercible b (Aspect c r s a)) 
-         => (g -> h -> i -> j -> k -> l -> m -> b) 
-         -> Aspect c r s (g -> h -> i -> j -> k -> l -> m -> IO a)
 prepare7 f = do
   r <- R.ask
   c <- ctx
   s <- sref
-  pure $ \_1 _2 _3 _4 _5 _6 _7 -> 
-    liftPure s (runReaderT (runContextT (runAspect (coerce f _1 _2 _3 _4 _5 _6 _7)) c) r)
+  pure $ \_1 _2 _3 _4 _5 _6 _7 -> runAspect c r s (coerce f _1 _2 _3 _4 _5 _6 _7)
 
-prepare8 :: (Coercible b (Aspect c r s a)) 
-         => (g -> h -> i -> j -> k -> l -> m -> n -> b) 
-         -> Aspect c r s (g -> h -> i -> j -> k -> l -> m -> n -> IO a)
 prepare8 f = do
   r <- R.ask
   c <- ctx
   s <- sref
-  pure $ \_1 _2 _3 _4 _5 _6 _7 _8 -> 
-    liftPure s (runReaderT (runContextT (runAspect (coerce f _1 _2 _3 _4 _5 _6 _7 _8)) c) r)
+  pure $ \_1 _2 _3 _4 _5 _6 _7 _8 -> runAspect c r s (coerce f _1 _2 _3 _4 _5 _6 _7 _8)
 
