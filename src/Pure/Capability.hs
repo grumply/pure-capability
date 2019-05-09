@@ -18,6 +18,9 @@ module Pure.Capability (
   -- * The Aspect type
   Aspect(..),
   runAspect,
+  viewAspectWith,
+  viewAspectDyn,
+  viewAspect,
   -- * The Rebase class
   Rebase(..),
   -- * The prepare methods
