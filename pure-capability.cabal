@@ -13,13 +13,15 @@ cabal-version:       >=1.10
 library
   exposed-modules:
       Pure.Capability
-      Pure.Capability.Class
+      Pure.Capability.Aspect
+      Pure.Capability.Context
+      Pure.Capability.Context.Trans
       Pure.Capability.FFunctor
       Pure.Capability.TH
-      Pure.Capability.Trans
 
   build-depends:
       base >=4.8,
+      pure-state,
       template-haskell,
       transformers,
       mtl

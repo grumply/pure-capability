@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes, KindSignatures, MultiParamTypeClasses,
    FunctionalDependencies, CPP, FlexibleInstances, UndecidableInstances #-}
-module Pure.Capability.Trans (
+module Pure.Capability.Context.Trans (
     -- * The Context monad
     Context,
     context,

@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses,
    UndecidableInstances #-}
-module Pure.Capability.Class (
+module Pure.Capability.Context (
     MonadContext(..),
     ctxs,
     ) where
@@ -24,8 +24,8 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad
 import Data.Monoid
 
-import Pure.Capability.Trans (ContextT)
-import qualified Pure.Capability.Trans as ContextT
+import Pure.Capability.Context.Trans (ContextT)
+import qualified Pure.Capability.Context.Trans as ContextT
 
 class Monad m => MonadContext c m | m -> c where
   ctx :: m c
