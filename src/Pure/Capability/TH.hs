@@ -240,7 +240,7 @@ mkContext record = do
 --
 -- > data X a m = X { _methodA :: a -> m () }
 -- > data Ctx m = Ctx { x :: X Int m }
--- > newtype SomeM a = SomeM { Aspect Ctx () () a }
+-- > newtype SomeM a = SomeM { unSomeM :: Aspect Ctx () () a }
 -- > mkAspect ''SomeM
 --
 -- Produces:
@@ -251,16 +251,25 @@ mkContext record = do
 -- >     c <- ctx
 -- >     r <- ask
 -- >     s <- sref
--- >     pure (X (runAspect (_methodA x) c r s))
+-- >     pure (X (evalAspect (_methodA x) c r s))
 -- > instance Rebase Ctx SomeM where
 -- >   rebase ctx = do
 -- >     x' <- rebase (x ctx)
 -- >     pure (Ctx x')
+-- > -- evalSomeM :: SomeM a -> Ctx -> () -> () -> IO a -- currently omitted
+-- > evalSomeM = evalAspect . unSomeM
+-- > -- viewSomeM :: SomeM View -> Ctx -> () -> () -> View -- currently omitted
+-- > viewSomeM = viewAspect . unSomeM
+-- > -- viewSomeMWith :: Reactive -> SomeM View -> Ctx -> () -> () -> View -- currently omitted
+-- > viewSomeMWith r = viewAspectWith r . unSomeM
+-- > -- viewSomeMDyn :: SomeM View -> Ctx -> () -> () -> View -- currently omitted
+-- > viewSomeMDyn = viewAspectDyn . unSomeM
+--
 mkAspect :: Name -> Q [Dec]
 mkAspect aspct = do
   ainfo <- reify aspct
   case ainfo of
-    TyConI (NewtypeD _ a _ _ (RecC _ [(unM,_,ty)]) _) -> do
+    TyConI (NewtypeD _ (Name (OccName nm) _) _ _ (RecC _ [(unM,_,ty)]) _) -> do
       case ty of
         AppT (AppT (AppT (AppT (ConT _) (AppT ctx m)) env) state) _ -> do
           cinfo <- reify (extractCtx ctx)
@@ -269,7 +278,8 @@ mkAspect aspct = do
               rebasedCapabilities <- for methods (deriveRebaseCapability unM)
               capabilityMonads <- for methods deriveCapabilityMonad
               rebasedContext <- deriveRebaseContext c
-              pure (rebasedContext : capabilityMonads ++ rebasedCapabilities)
+              utils <- makeUtils nm unM
+              pure (rebasedContext : capabilityMonads ++ rebasedCapabilities ++ utils)
             _ -> error "error in aspect: expected aspect context to be a record of capabilities."
         _ -> error "error in aspect: expected a newtype wrapper around an Aspect type."
     _ ->
@@ -311,7 +321,7 @@ mkAspect aspct = do
                             (VarE (mkName "pure") `AppE` 
                               foldl (\f (nm,args) -> AppE f $
                                 (LamE (map (\a -> VarP a) args) $
-                                  VarE (mkName "runAspect") `AppE`
+                                  VarE (mkName "evalAspect") `AppE`
                                     ParensE (VarE unM `AppE`
                                       ParensE (foldl (\f a -> f `AppE` VarE a) (VarE nm `AppE` VarE ct) args)
                                       ) `AppE` VarE c `AppE` VarE r `AppE` VarE s
@@ -383,3 +393,28 @@ mkAspect aspct = do
             _ -> error "error in mkAspect: context's last type variable must be of kind `* -> *`"
         _ ->
           error "error in mkAspect: context must be a parametrically polymorphic single-constructor non-GADT record data type with a last type variable of kind `* -> *`"
+
+    makeUtils nm unM = do
+      r <- newName "r"
+      pure
+        [ FunD (mkName $ "eval" ++ nm) 
+          [ Clause [] (NormalB $ 
+              InfixE (Just $ VarE (mkName "evalAspect")) (VarE (mkName ".")) (Just $ VarE unM)
+            ) []
+          ]
+        , FunD (mkName $ "view" ++ nm) 
+          [ Clause [] (NormalB $
+              InfixE (Just $ VarE (mkName "viewAspect")) (VarE (mkName ".")) (Just $ VarE unM)
+            ) []
+          ]
+        , FunD (mkName $ "view" ++ nm ++ "With") 
+          [ Clause [ VarP r ] (NormalB $
+              InfixE (Just $ VarE (mkName "viewAspectWith") `AppE` VarE r) (VarE (mkName ".")) (Just $ VarE unM)
+            ) []
+          ]
+        , FunD (mkName $ "view" ++ nm ++ "Dyn") 
+          [ Clause [] (NormalB $
+              InfixE (Just $ VarE (mkName "viewAspectDyn")) (VarE (mkName ".")) (Just $ VarE unM)
+            ) []
+          ]
+        ]

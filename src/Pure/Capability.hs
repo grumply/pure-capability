@@ -17,7 +17,7 @@ module Pure.Capability (
   withContextT,
   -- * The Aspect type
   Aspect(..),
-  runAspect,
+  evalAspect,
   viewAspectWith,
   viewAspectDyn,
   viewAspect,
@@ -36,7 +36,10 @@ module Pure.Capability (
   -- * Re-exported modules
   module Control.Monad,
   module Control.Monad.Fix,
-  module Control.Monad.Trans
+  module Control.Monad.Reader,
+  module Control.Monad.State,
+  module Control.Monad.Trans,
+  module Pure.State
   ) where
 
 import Pure.Capability.Aspect
@@ -49,6 +52,11 @@ import Pure.Capability.FFunctor
 import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.Trans
+
+import Control.Monad.Reader
+import Control.Monad.State
+
+import Pure.State
 
 {-
 import Pure.Capability.TH
