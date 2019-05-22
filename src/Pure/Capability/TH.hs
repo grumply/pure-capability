@@ -269,7 +269,7 @@ mkAspect :: Name -> Q [Dec]
 mkAspect aspct = do
   ainfo <- reify aspct
   case ainfo of
-    TyConI (NewtypeD _ (Name (OccName nm) _) _ _ (RecC _ [(unM,_,ty)]) _) -> do
+    TyConI (NewtypeD _ (Name (OccName nm) _) tyvs _ (RecC _ [(unM,_,ty)]) _) -> do
       case ty of
         AppT (AppT (AppT (AppT (ConT _) (AppT ctx m)) env) state) _ -> do
           cinfo <- reify (extractCtx ctx)
@@ -279,7 +279,8 @@ mkAspect aspct = do
               capabilityMonads <- for methods deriveCapabilityMonad
               rebasedContext <- deriveRebaseContext c
               utils <- makeUtils nm unM
-              pure (rebasedContext : capabilityMonads ++ rebasedCapabilities ++ utils)
+              is <- deriveInstances ctx env state (fmap lowerTVB $ init tyvs)
+              pure (rebasedContext : capabilityMonads ++ rebasedCapabilities ++ utils ++ is)
             _ -> error "error in aspect: expected aspect context to be a record of capabilities."
         _ -> error "error in aspect: expected a newtype wrapper around an Aspect type."
     _ ->
@@ -290,6 +291,9 @@ mkAspect aspct = do
 
     initTy (AppT l r) = l
     initTy l = l
+
+    lowerTVB (KindedTV nm _) = PlainTV nm
+    lowerTVB x = x
 
     deriveRebaseCapability unM (nm,_,ty) = do
       cinfo <- reify (extractCtx ty)
@@ -418,3 +422,18 @@ mkAspect aspct = do
             ) []
           ]
         ]
+
+    deriveInstances ctx env state tyvs = do
+      let 
+        ity1 nm = ConT (mkName nm) `AppT` ParensT (foldl (\f (PlainTV nm) -> f `AppT` VarT nm) (ConT aspct) tyvs)
+        ity2 nm l = ConT (mkName nm) `AppT` l `AppT` ParensT (foldl (\f (PlainTV nm) -> f `AppT` VarT nm) (ConT aspct) tyvs)
+      pure
+        [ StandaloneDerivD Nothing [] (ity1 "Functor") 
+        , StandaloneDerivD Nothing [] (ity1 "Applicative")
+        , StandaloneDerivD Nothing [] (ity1 "Monad")
+        , StandaloneDerivD Nothing [] (ity1 "MonadIO")
+        , StandaloneDerivD Nothing [] (ity2 "MonadReader" (ParensT env))
+        , StandaloneDerivD Nothing [] (ity2 "MonadContext" (ParensT $ ctx `AppT` ConT aspct))
+        , StandaloneDerivD Nothing [] (ity2 "MonadSRef" (ParensT state))
+        ]
+
