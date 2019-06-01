@@ -24,6 +24,7 @@ library
       pure-core,
       pure-state,
       template-haskell,
+      exceptions,
       transformers,
       mtl
 

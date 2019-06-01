@@ -16,6 +16,7 @@ module Pure.Capability.Context.Trans (
     contextual,
     ) where
 
+import Control.Monad.Catch
 import Control.Monad.IO.Class
 import Control.Monad.Signatures
 import Control.Monad.Trans.Class
@@ -180,3 +181,27 @@ liftCatch :: (m a -> (e -> m a) -> m a)
           -> (e -> ContextT c m a) 
           -> ContextT c m a
 liftCatch f m h = ContextT $ \c -> f (runContextT m c) (\e -> runContextT (h e) c)
+
+instance MonadThrow m => MonadThrow (ContextT c m) where
+  throwM = lift . throwM
+
+instance MonadCatch m => MonadCatch (ContextT c m) where
+  catch (ContextT m) c = ContextT $ \f -> m f `catch` \e -> runContextT (c e) f
+
+instance MonadMask m => MonadMask (ContextT c m) where
+  mask a = ContextT $ \e -> mask $ \u -> runContextT (a $ q u) e
+    where
+      q :: (m a -> m a) -> ContextT c m a -> ContextT c m a
+      q u (ContextT b) = ContextT (u . b)
+
+  uninterruptibleMask a =
+    ContextT $ \e -> uninterruptibleMask $ \u -> runContextT (a $ q u) e
+      where 
+        q :: (m a -> m a) -> ContextT e m a -> ContextT e m a
+        q u (ContextT b) = ContextT (u . b)
+
+  generalBracket acquire release use = ContextT $ \c ->
+    generalBracket
+      (runContextT acquire c)
+      (\resource exitCase -> runContextT (release resource exitCase) c)
+      (\resource -> runContextT (use resource) c)

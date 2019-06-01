@@ -8,6 +8,7 @@ import Pure.Capability.FFunctor
 import Pure.Data.View (View)
 import Pure.State
 
+import Control.Monad.Catch
 import Control.Monad.Reader as R hiding (lift)
 import Control.Monad.IO.Class
 
@@ -17,9 +18,13 @@ import Data.Typeable
 newtype Aspect c r s a = Aspect 
   { unAspect :: ContextT c (ReaderT r (PureM s)) a 
   } deriving 
-      (Functor,Applicative,Monad,MonadIO ,MonadReader r
+      (Functor,Applicative,Monad,MonadIO,MonadReader r
+      ,MonadFix
       ,MonadSRef s
       ,MonadContext c
+      ,MonadCatch
+      ,MonadThrow
+      ,MonadMask
       )
 
 evalAspect :: Aspect c r s a -> c -> r -> SRef s -> IO a

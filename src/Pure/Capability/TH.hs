@@ -10,6 +10,7 @@ import Pure.Capability.FFunctor as Export
 import Data.Foldable
 import Data.Traversable
 
+import Debug.Trace
 -- | Given a single-constructor non-GADT parametrically polymorphic record type
 -- of fields with parameterized return types, produce a `Monad<Capability>`
 -- class to simplify use of that type. This is a sort of inversion/reification
@@ -340,7 +341,7 @@ mkAspect aspct = do
             _ -> error "error in mkAspect: the last type variable of each of a context's capability must be of kind `* -> *`"
         _ -> error "error in mkAspect: context's capabilities must be parametrically polymorphic single-constructor non-GADT record data type with a last type variable of kind `* -> *`"
 
-    deriveCapabilityMonad (nm,_,ty) =  do
+    deriveCapabilityMonad (nm,_,ty) = do
       let ctx@(Name (OccName cnm) _) = extractCtx ty
           safeTail [] = []
           safeTail (_:xs) = xs
@@ -348,8 +349,12 @@ mkAspect aspct = do
             where
               extractTys vs (ConT v) = vs ++ [ConT v]
               extractTys vs (VarT v) = vs ++ [VarT v]
-              extractTys vs (AppT l r) = extractTys vs l ++ extractTys [] r
+              extractTys vs (AppT l r) = vs ++ extractTys vs l ++ extractTysR r
               extractTys vs (ForallT _ _ ty) = extractTys vs ty
+
+              extractTysR (AppT l r) = [ ParensT (AppT l r) ]
+              extractTysR ty = extractTys [] ty
+
       cinfo <- reify ctx
       case cinfo of
         TyConI (DataD _ _ [] _ _ _) ->
@@ -435,5 +440,9 @@ mkAspect aspct = do
         , StandaloneDerivD Nothing [] (ity2 "MonadReader" (ParensT env))
         , StandaloneDerivD Nothing [] (ity2 "MonadContext" (ParensT $ ctx `AppT` ConT aspct))
         , StandaloneDerivD Nothing [] (ity2 "MonadSRef" (ParensT state))
+        , StandaloneDerivD Nothing [] (ity1 "MonadThrow")
+        , StandaloneDerivD Nothing [] (ity1 "MonadCatch")
+        , StandaloneDerivD Nothing [] (ity1 "MonadMask")
+        , StandaloneDerivD Nothing [] (ity1 "MonadFix")
         ]
 
