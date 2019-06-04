@@ -39,6 +39,7 @@ module Pure.Capability (
   module Control.Monad.Reader,
   module Control.Monad.State,
   module Control.Monad.Trans,
+  module Control.Monad.Catch,
   module Pure.State
   ) where
 
@@ -52,6 +53,8 @@ import Pure.Capability.FFunctor
 import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.Trans
+
+import Control.Monad.Catch
 
 import Control.Monad.Reader
 import Control.Monad.State
