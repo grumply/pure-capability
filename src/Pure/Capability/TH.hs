@@ -263,8 +263,8 @@ mkContext record = do
 -- > viewSomeM = viewAspect . unSomeM
 -- > -- viewSomeMWith :: Reactive -> SomeM View -> Ctx -> () -> () -> View -- currently omitted
 -- > viewSomeMWith r = viewAspectWith r . unSomeM
--- > -- viewSomeMDyn :: SomeM View -> Ctx -> () -> () -> View -- currently omitted
--- > viewSomeMDyn = viewAspectDyn . unSomeM
+-- > -- viewSomeMStatic :: SomeM View -> Ctx -> () -> () -> View -- currently omitted
+-- > viewSomeMStatic = viewAspectStatic . unSomeM
 --
 mkAspect :: Name -> Q [Dec]
 mkAspect aspct = do
@@ -421,9 +421,9 @@ mkAspect aspct = do
               InfixE (Just $ VarE (mkName "viewAspectWith") `AppE` VarE r) (VarE (mkName ".")) (Just $ VarE unM)
             ) []
           ]
-        , FunD (mkName $ "view" ++ nm ++ "Dyn") 
+        , FunD (mkName $ "view" ++ nm ++ "Static") 
           [ Clause [] (NormalB $
-              InfixE (Just $ VarE (mkName "viewAspectDyn")) (VarE (mkName ".")) (Just $ VarE unM)
+              InfixE (Just $ VarE (mkName "viewAspectStatic")) (VarE (mkName ".")) (Just $ VarE unM)
             ) []
           ]
         ]

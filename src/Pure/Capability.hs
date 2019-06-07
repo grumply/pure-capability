@@ -19,7 +19,7 @@ module Pure.Capability (
   Aspect(..),
   evalAspect,
   viewAspectWith,
-  viewAspectDyn,
+  viewAspectStatic,
   viewAspect,
   -- * The Rebase class
   Rebase(..),

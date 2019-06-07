@@ -34,10 +34,10 @@ viewAspectWith :: Typeable s => Reactive -> Aspect c r s View -> c -> r -> s -> 
 viewAspectWith dyn v c r s = runPureWith dyn s (runReaderT (runContextT (unAspect v) c) r)
 
 viewAspect :: Typeable s => Aspect c r s View -> c -> r -> s -> View
-viewAspect = viewAspectWith (Reactive False False)
+viewAspect = viewAspectWith (Reactive True True)
 
-viewAspectDyn :: Typeable s => Aspect c r s View -> c -> r -> s -> View
-viewAspectDyn = viewAspectWith (Reactive True True)
+viewAspectStatic :: Typeable s => Aspect c r s View -> c -> r -> s -> View
+viewAspectStatic = viewAspectWith (Reactive False False)
 
 class Rebase c m where
   rebase :: c m -> m (c IO)
