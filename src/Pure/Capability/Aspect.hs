@@ -34,7 +34,7 @@ viewAspectWith :: Typeable s => Reactive -> Aspect c r s View -> c -> r -> s -> 
 viewAspectWith dyn v c r s = runPureWith dyn s (runReaderT (runContextT (unAspect v) c) r)
 
 viewAspect :: Typeable s => Aspect c r s View -> c -> r -> s -> View
-viewAspect = viewAspectWith (Reactive True True)
+viewAspect = viewAspectWith (Reactive False True)
 
 viewAspectStatic :: Typeable s => Aspect c r s View -> c -> r -> s -> View
 viewAspectStatic = viewAspectWith (Reactive False False)
