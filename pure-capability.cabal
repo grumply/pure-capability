@@ -1,14 +1,18 @@
 name:                pure-capability
-version:             0.7.0.0
+version:             0.8.0.0
 synopsis:            A derivation approach for record-of-function–style extensible capabilities.
-homepage:            github.com/grumply/pure-capability
+homepage:            purehs.org/doc/pure-capability
 license:             BSD3
 license-file:        LICENSE
-author:              Sean Mackenzie
-maintainer:          sean@grump.ly
+author:              Sean Hickman
+maintainer:          sean@grumply.com
 category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
+
+source-repository head
+  type: git
+  location: https://github.com/grumply/pure-capability.git
 
 library
   exposed-modules:
