@@ -37,7 +37,6 @@ module Pure.Capability (
   module Control.Monad,
   module Control.Monad.Fix,
   module Control.Monad.Reader,
-  module Control.Monad.State,
   module Control.Monad.Trans,
   module Control.Monad.Catch,
   module Pure.State
@@ -57,7 +56,6 @@ import Control.Monad.Trans
 import Control.Monad.Catch
 
 import Control.Monad.Reader
-import Control.Monad.State
 
 import Pure.State
 
